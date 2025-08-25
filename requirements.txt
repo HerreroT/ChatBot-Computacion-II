@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+sqlalchemy[asyncio]
+asyncmy
+python-jose[cryptography]
+passlib[bcrypt]
+structlog
+prometheus-client
+httpx
+opentelemetry-sdk
+opentelemetry-exporter-otlp
