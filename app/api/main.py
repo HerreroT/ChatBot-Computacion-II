@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import re
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -9,49 +7,15 @@ from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.config import HealthStatus, get_settings
-from app.db.models import (
-    Conversation,
-    Message,
-    Reservation,
-    SenderEnum,
-    Session as ChatSession,
-)
+from app.api.sockets import router as sockets_router
+from app.api.webhook_whatsapp import router as webhook_router
+from app.common.config import HealthStatus
+from app.core.booking_lock import init_booking_semaphore
+from app.core.config import Settings, get_settings
+from app.core.logging import RequestIdMiddleware, setup_logging
+from app.core.observability import setup_metrics
+from app.db.models import Conversation, Message, SenderEnum, Session as ChatSession
 from app.db.session import get_db
-
-
-MESSAGE_REGEX = re.compile(
-    r"^(?P<service>[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]+)\s+(?P<day>\d{1,2})[/-](?P<month>\d{1,2})\s+(?P<hour>\d{1,2}):(?P<minute>\d{2})$",
-    flags=re.UNICODE,
-)
-
-
-def _parse_whatsapp_message(message: str) -> tuple[str, datetime]:
-    cleaned = message.strip()
-    match = MESSAGE_REGEX.match(cleaned)
-    if not match:
-        raise ValueError(
-            "Formato de mensaje inválido. Usa 'servicio dd/mm HH:MM', por ejemplo 'corte 25/08 16:00'."
-        )
-
-    service = match.group("service").strip()
-    day = int(match.group("day"))
-    month = int(match.group("month"))
-    hour = int(match.group("hour"))
-    minute = int(match.group("minute"))
-
-    now = datetime.now(timezone.utc)
-    year = now.year
-
-    try:
-        scheduled = datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
-    except ValueError as exc:
-        raise ValueError(str(exc)) from exc
-
-    if scheduled < now:
-        scheduled = datetime(year + 1, month, day, hour, minute, tzinfo=timezone.utc)
-
-    return service, scheduled
 
 
 class ChatRequest(BaseModel):
@@ -65,20 +29,14 @@ class ChatResponse(BaseModel):
     session_id: int
 
 
-class WhatsAppWebhookRequest(BaseModel):
-    message: str
-
-
-class WhatsAppWebhookResponse(BaseModel):
-    confirmation: str
-    service: str
-    scheduled_at: datetime
-    reservation_id: int
-
-
 def create_app() -> FastAPI:
     settings = get_settings()
+    _configure_runtime(settings)
+
     app = FastAPI(title=settings.name, version=settings.version, debug=settings.debug)
+    app.add_middleware(RequestIdMiddleware)
+
+    setup_metrics(app, enabled=settings.metrics_enabled)
 
     @app.get("/", response_model=HealthStatus)
     async def root() -> HealthStatus:
@@ -89,14 +47,16 @@ def create_app() -> FastAPI:
         try:
             await session.execute(text("SELECT 1"))
             return HealthStatus(status="ok", service=settings.name, version=settings.version)
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
 
     @app.post("/chat", response_model=ChatResponse)
     async def chat(
         payload: ChatRequest, session: AsyncSession = Depends(get_db)
     ) -> ChatResponse:
-        # Ensure session exists or create one (anonymous/no user linkage for now)
         chat_session_id: Optional[int] = payload.session_id
         if chat_session_id is not None:
             result = await session.execute(
@@ -106,9 +66,9 @@ def create_app() -> FastAPI:
             if chat_session is None:
                 raise HTTPException(status_code=404, detail="Session not found")
         else:
-            chat_session = ChatSession(user_id=0)  # 0 = anonymous/guest
+            chat_session = ChatSession(user_id=0)
             session.add(chat_session)
-            await session.flush()  # to populate id
+            await session.flush()
             chat_session_id = chat_session.id
 
         conversation = Conversation(session_id=chat_session_id)
@@ -122,7 +82,6 @@ def create_app() -> FastAPI:
         )
         session.add(user_msg)
 
-        # Dummy bot reply
         reply_text = f"Echo: {payload.message}"
         bot_msg = Message(
             conversation_id=conversation.id,
@@ -133,37 +92,20 @@ def create_app() -> FastAPI:
         await session.commit()
 
         return ChatResponse(
-            reply=reply_text, conversation_id=conversation.id, session_id=chat_session_id
+            reply=reply_text,
+            conversation_id=conversation.id,
+            session_id=chat_session_id,
         )
 
-    @app.post("/webhook/whatsapp", response_model=WhatsAppWebhookResponse)
-    async def whatsapp_webhook(
-        payload: WhatsAppWebhookRequest, session: AsyncSession = Depends(get_db)
-    ) -> WhatsAppWebhookResponse:
-        try:
-            service, scheduled_at = _parse_whatsapp_message(payload.message)
-        except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-
-        reservation = Reservation(
-            service=service, scheduled_at=scheduled_at, raw_message=payload.message
-        )
-        session.add(reservation)
-        await session.commit()
-        await session.refresh(reservation)
-
-        confirmation = (
-            f"Reserva confirmada para {service} el {scheduled_at.strftime('%d/%m/%Y %H:%M')}."
-        )
-
-        return WhatsAppWebhookResponse(
-            confirmation=confirmation,
-            service=reservation.service,
-            scheduled_at=reservation.scheduled_at,
-            reservation_id=reservation.id,
-        )
+    app.include_router(webhook_router)
+    app.include_router(sockets_router)
 
     return app
+
+
+def _configure_runtime(settings: Settings) -> None:
+    setup_logging(settings)
+    init_booking_semaphore(settings)
 
 
 app = create_app()

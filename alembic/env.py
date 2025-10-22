@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from app.common.config import get_settings
+from app.core.config import get_settings
 from app.db import models as db_models
 
 
@@ -64,4 +64,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     asyncio.run(run_migrations_online())
-

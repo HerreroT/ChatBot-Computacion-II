@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.config import get_settings
+from app.core.config import get_settings
 from app.db.models import User
 from app.db.session import get_db
 

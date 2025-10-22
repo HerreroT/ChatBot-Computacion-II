@@ -1,77 +1,77 @@
-# ChatBot-Computacion-II
+# Barber Bot Backend
 
-API base con FastAPI + persistencia MySQL (async) + autenticación JWT.
+FastAPI backend for automated barber bookings via WhatsApp. Handles async MySQL persistence, JWT auth, WebSocket notifications, observability, and Dockerized deployment.
 
-Requisitos: Python 3.11+, MySQL 8+, `virtualenv`.
+## Features
+- Async FastAPI + SQLAlchemy (asyncmy) with connection pooling
+- WhatsApp webhook parsing (`corte 25/08 16:00`) → creates bookings with slot locking
+- Per-slot semaphore guard + DB uniqueness to avoid double reservations under load
+- Customer auto-provisioning by phone number
+- WebSocket (`/ws/admin`) broadcasting `booking.created` events in real time
+- Prometheus metrics at `/metrics`, structured JSON logging with `request_id`
+- Alembic migrations, pytest + pytest-asyncio test suite
+- Docker Compose for app + MySQL + optional Prometheus
 
-## Configuración
-
-- Variables en `.env` (opcionales, con defaults razonables):
-  - `APP_NAME` (def: `chatbot-api`)
-  - `APP_DEBUG` (def: `true`)
-  - `APP_VERSION` (def: `0.1.0`)
-  - `APP_DATABASE_URL` (def: `mysql+asyncmy://user:password@localhost:3306/chatbot`)
-  - `APP_JWT_SECRET` (def: `change-me-in-prod`)
-  - `APP_JWT_ALGORITHM` (def: `HS256`)
-  - `APP_ACCESS_TOKEN_EXPIRE_MINUTES` (def: `60`)
-
-Instalar dependencias:
+## Configuration
+The application reads settings from environment variables (prefix `APP_`). Common options:
 
 ```
-python -m venv .venv
+APP_NAME=barber-bot
+APP_ENV=dev
+APP_DEBUG=true
+APP_DATABASE_URL=mysql+asyncmy://user:password@localhost:3306/barber_bot
+APP_JWT_SECRET=change-me
+APP_BOOKING_CONCURRENCY=8
+APP_BOOKING_SLOT_MINUTES=30
+APP_TIMEZONE=America/Argentina/Mendoza
+```
+
+Create a `.env` file (loaded automatically by pydantic-settings) or export variables.
+
+## Local Development
+Install dependencies and run migrations:
+
+```
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-## Base de datos y migraciones
-
-1) Crear la base en MySQL:
-
-```
-CREATE DATABASE chatbot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'user'@'localhost' IDENTIFIED BY 'password';
-GRANT ALL PRIVILEGES ON chatbot.* TO 'user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-2) Ajustar `APP_DATABASE_URL` en `.env`, por ejemplo:
-
-```
-APP_DATABASE_URL=mysql+asyncmy://user:password@localhost:3306/chatbot
-```
-
-3) Aplicar migraciones:
-
-```
 alembic upgrade head
 ```
 
-> Nota: Alembic está configurado en modo async en `alembic/env.py` y usa `APP_DATABASE_URL`.
-
-## Ejecutar la API
+Start the API:
 
 ```
-uvicorn app.api.main:app --reload
+uvicorn app.main:app --reload
 ```
 
-Rutas:
-- `GET /` → status básico
-- `GET /healthz` → chequeo de DB
-- `POST /chat` → dummy (crea conversación + mensajes y devuelve eco)
+### WhatsApp Webhook
+```
+curl -X POST http://localhost:8000/webhook/whatsapp \
+     -H "Content-Type: application/json" \
+     -d '{"from": "+549261123456", "text": "corte 25/08 16:00"}'
+```
 
-## Autenticación
+### WebSocket Feed
+Connect an admin dashboard to `ws://localhost:8000/ws/admin` and listen for `booking.created` payloads.
 
-- Utilidades JWT y hashing en `app/api/auth.py` (passlib + jose).
-- Dependencia `get_current_user` lista para proteger rutas.
+### Metrics & Health
+- `GET /healthz` → DB check 
+- `GET /metrics` → Prometheus metrics (gzip enabled)
+
+## Docker
+Build and launch the full stack (app + MySQL + Prometheus):
+
+```
+docker compose up --build
+```
+
+The API listens on `http://localhost:8000`, Prometheus on `http://localhost:9090`. MySQL is exposed on `localhost:3306` (user: `app`, password: `app`).
 
 ## Tests
-
-Los tests usan SQLite in-memory (async) para aislar la base.
+Run the async test suite (uses in-memory SQLite + async engine):
 
 ```
-pytest -q
+pytest
 ```
 
-Incluye:
-- `tests/test_api.py`: prueba `/, /healthz, /chat`.
-- `tests/test_models.py`: creación de `User` y `Session`.
+Includes parsing, webhook success/error, concurrency guard, WebSocket broadcasting, and legacy model tests.
