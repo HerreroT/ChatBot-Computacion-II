@@ -1,0 +1,94 @@
+═══════════════════════════════════════════════════════════════════
+  CÓMO TESTEAR EL SISTEMA DE RESERVAS WHATSAPP
+═══════════════════════════════════════════════════════════════════
+
+OPCIÓN MÁS FÁCIL: Usar la interfaz web
+─────────────────────────────────────────────────────────────────
+
+1. Abrir terminal y ejecutar:
+   docker-compose up --build
+
+2. Esperar a ver: "INFO: Uvicorn running on http://0.0.0.0:8000"
+
+3. Abrir navegador en:
+   http://localhost:8000/docs
+
+4. En la interfaz web:
+   - Hacer click en POST /webhook/whatsapp
+   - Click en "Try it out"
+   - Modificar el JSON:
+     {
+       "message_id": "test-001",
+       "from": "+5492611111111",
+       "body": "corte 15/12 16:00",
+       "tenant_id": "barberia-01"
+     }
+   - Click en "Execute"
+   - Ver la respuesta ✓
+
+
+OPCIÓN CON SCRIPT AUTOMÁTICO (Windows PowerShell)
+─────────────────────────────────────────────────────────────────
+
+1. Levantar el sistema:
+   docker-compose up --build
+
+2. En otra terminal, ejecutar:
+   .\test.ps1
+
+
+OPCIÓN MANUAL CON CURL
+─────────────────────────────────────────────────────────────────
+
+1. Levantar el sistema:
+   docker-compose up --build
+
+2. Verificar salud:
+   curl http://localhost:8000/health
+   (Debe responder: {"status":"ok","db":"up"})
+
+3. Crear reserva:
+   curl -X POST http://localhost:8000/webhook/whatsapp ^
+     -H "Content-Type: application/json" ^
+     -d "{\"message_id\":\"test-001\",\"from\":\"+5492611111111\",\"body\":\"corte 15/12 16:00\",\"tenant_id\":\"barberia-01\"}"
+
+
+CASOS DE PRUEBA
+─────────────────────────────────────────────────────────────────
+
+✓ Reserva válida:           "corte 15/12 16:00"  → 200 OK
+✗ Fecha pasada:             "corte 01/01 10:00"  → 422 Error
+✗ Formato inválido:         "hola como estas"    → 422 Error
+✗ Servicio no soportado:    "peinado 15/12 16:00"→ 422 Error
+✓ Idempotencia:             Mismo message_id     → Misma reserva
+✓ Límite cupos:             >3 reservas mismo slot → 409 Error
+
+
+VER LOGS
+─────────────────────────────────────────────────────────────────
+
+docker-compose logs -f api
+
+
+SI FALLA ALGO
+─────────────────────────────────────────────────────────────────
+
+ERROR: "unable to get image"
+→ Iniciar Docker Desktop desde el menú de inicio
+
+docker-compose down
+docker-compose up --build
+
+Ver más en: SOLUCION_PROBLEMAS.md
+
+
+MÁS INFORMACIÓN
+─────────────────────────────────────────────────────────────────
+
+- INSTRUCCIONES_RAPIDAS.md  → Guía rápida en español
+- TESTING.md                → Guía completa de testing
+- README.md                 → Documentación completa
+- IMPLEMENTACION.md         → Detalles técnicos
+
+═══════════════════════════════════════════════════════════════════
+
