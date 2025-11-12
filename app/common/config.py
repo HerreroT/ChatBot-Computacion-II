@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     
-    # API
-    API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8000
+    # Servidor TCP
+    TCP_HOST: str = "127.0.0.1"
+    TCP_PORT: int = 8765
     
     class Config:
         case_sensitive = True

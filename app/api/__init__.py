@@ -1,6 +1,0 @@
-"""API de la aplicación."""
-
-
-
-
-

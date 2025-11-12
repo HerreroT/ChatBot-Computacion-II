@@ -9,8 +9,6 @@ services:
       MYSQL_DATABASE: barber
       MYSQL_USER: barber_user
       MYSQL_PASSWORD: barber_pass
-    ports:
-      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -20,19 +18,21 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
+  tcp_server:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: barber_api
+    container_name: barber_tcp
     ports:
-      - "8000:8000"
+      - "8765:8765"
     environment:
       DB_URL: "mysql+aiomysql://root:password@db:3306/barber"
       TZ: "America/Argentina/Buenos_Aires"
       CONCURRENCY_PER_SLOT: "3"
       LOCAL_SEMAPHORE_SIZE: "100"
       LOG_LEVEL: "INFO"
+      TCP_HOST: "0.0.0.0"
+      TCP_PORT: "8765"
     depends_on:
       db:
         condition: service_healthy
@@ -41,7 +41,7 @@ services:
         echo 'Waiting for database...' &&
         sleep 5 &&
         alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --loop asyncio
+        python -m app.socket_srv.server
       "
 
 volumes:

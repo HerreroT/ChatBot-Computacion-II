@@ -1,6 +1,0 @@
-"""Routers de la API."""
-
-
-
-
-

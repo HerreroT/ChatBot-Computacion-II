@@ -1,6 +1,0 @@
-"""Tests de la aplicación."""
-
-
-
-
-
