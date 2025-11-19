@@ -3,10 +3,19 @@ from __future__ import annotations
 
 import json
 import socket
+import sys
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional, Tuple
+
+# Permite ejecutar el archivo directamente (`python app/socket_srv/server.py`)
+# sin depender de PYTHONPATH. Útil para desarrolladores fuera de Docker.
+if __package__ in (None, ""):
+    project_root = Path(__file__).resolve().parents[2]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
 import structlog
 
@@ -323,5 +332,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
