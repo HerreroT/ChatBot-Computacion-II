@@ -1,0 +1,67 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║         SISTEMA DE RESERVAS - BARBERÍA                        ║
+║         Computación II                                        ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+
+🚀 PARA INICIAR EL PROYECTO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abrir PowerShell en esta carpeta
+   (Click derecho → "Abrir en Terminal")
+
+2. Ejecutar:
+   docker-compose up -d
+
+3. Verificar:
+   docker-compose ps
+
+   ✓ Debes ver "barber_mysql" y "barber_tcp" corriendo
+
+
+🧪 PARA HACER UNA RESERVA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPCIÓN 1 - Más fácil (doble click):
+   DEMO_RESERVA.bat
+
+OPCIÓN 2 - PowerShell:
+   .\prueba_rapida.ps1
+
+OPCIÓN 3 - Con parámetros personalizados:
+   .\test_reserva.ps1 -Usuario "Juan" -Horario "2025-11-20 15:00"
+
+
+📚 DOCUMENTACIÓN COMPLETA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ver:
+   - COMANDOS_RAPIDOS.md    → Guía completa
+   - GUIA_PRESENTACION.md   → Para presentar el proyecto
+   - SOLUCION_PROBLEMAS.md  → Si algo no funciona
+
+
+🛑 PARA DETENER:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   docker-compose down
+
+
+⚡ ARCHIVOS DISPONIBLES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   DEMO_RESERVA.bat       → Doble click y listo
+   prueba_rapida.ps1      → Demo automática rápida
+   test_reserva.ps1       → Script completo con opciones
+   test_reserva.py        → Versión en Python
+   debug_reserva.ps1      → Para depuración
+
+   COMANDOS_RAPIDOS.md    → Todos los comandos necesarios
+   GUIA_PRESENTACION.md   → Guía paso a paso para presentar
+   INICIO.txt             → Este archivo
+
+
+💡 TIP: Lee COMANDOS_RAPIDOS.md para la guía completa
+
