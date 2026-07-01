@@ -37,6 +37,6 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
 
 
-@lru_cache
+@lru_cache #concurrencias de reservas, zona horaria
 def get_settings() -> Settings:
     return Settings()

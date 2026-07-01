@@ -11,10 +11,11 @@ services:
       APP_BOOKING_CONCURRENCY: 8
       APP_BOOKING_SLOT_MINUTES: 30
       APP_TIMEZONE: America/Argentina/Mendoza
+      PYTHONPATH: /app
     ports:
-      - "8000:8000"
+      - "8001:8000"
     command: >
-      bash -lc "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      bash -c "/opt/venv/bin/alembic upgrade head && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   mysql:
     image: mysql:8.0
@@ -25,9 +26,9 @@ services:
       MYSQL_USER: app
       MYSQL_PASSWORD: app
     ports:
-      - "3306:3306"
+      - "3307:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5

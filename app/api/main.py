@@ -14,7 +14,7 @@ from app.core.booking_lock import init_booking_semaphore
 from app.core.config import Settings, get_settings
 from app.core.logging import RequestIdMiddleware, setup_logging
 from app.core.observability import setup_metrics
-from app.db.models import Conversation, Message, SenderEnum, Session as ChatSession
+from app.db.models import Conversation, Message, SenderEnum, Session as ChatSession, User
 from app.db.session import get_db
 
 
@@ -27,6 +27,9 @@ class ChatResponse(BaseModel):
     reply: str
     conversation_id: int
     session_id: int
+
+
+DEMO_USER_EMAIL = "demo@example.com"
 
 
 def create_app() -> FastAPI:
@@ -66,7 +69,19 @@ def create_app() -> FastAPI:
             if chat_session is None:
                 raise HTTPException(status_code=404, detail="Session not found")
         else:
-            chat_session = ChatSession(user_id=0)
+            result = await session.execute(
+                select(User).where(User.email == DEMO_USER_EMAIL)
+            )
+            user = result.scalar_one_or_none()
+            if user is None:
+                user = User(
+                    email=DEMO_USER_EMAIL,
+                    hashed_password="not-used-for-demo-chat",
+                )
+                session.add(user)
+                await session.flush()
+
+            chat_session = ChatSession(user_id=user.id)
             session.add(chat_session)
             await session.flush()
             chat_session_id = chat_session.id

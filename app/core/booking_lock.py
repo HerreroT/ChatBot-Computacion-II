@@ -21,7 +21,7 @@ def init_booking_semaphore(settings: Settings) -> None:
         _current_limit = settings.booking_concurrency
 
 
-async def _get_slot_lock(slot_key: str) -> asyncio.Lock:
+async def _get_slot_lock(slot_key: str) -> asyncio.Lock:  #lock horario
     async with _global_lock:
         entry = _slot_locks.get(slot_key)
         if entry is None:
@@ -35,7 +35,7 @@ async def _get_slot_lock(slot_key: str) -> asyncio.Lock:
 
 async def _release_slot_lock(slot_key: str) -> None:
     async with _global_lock:
-        lock, refcount = _slot_locks.get(slot_key, (None, 0))  # type: ignore[assignment]
+        lock, refcount = _slot_locks.get(slot_key, (None, 0))  
         if lock is None:
             return
         refcount -= 1
@@ -46,7 +46,7 @@ async def _release_slot_lock(slot_key: str) -> None:
 
 
 @asynccontextmanager
-async def booking_slot_guard(starts_at: datetime):
+async def booking_slot_guard(starts_at: datetime):      #semaforo
     if _semaphore is None:
         raise RuntimeError("Booking semaphore not initialised. Call init_booking_semaphore first.")
 

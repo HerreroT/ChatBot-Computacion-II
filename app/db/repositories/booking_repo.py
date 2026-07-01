@@ -40,7 +40,7 @@ class BookingRepository:
         self.session.add(booking)
         try:
             await self.session.flush()
-        except IntegrityError as exc:
+        except IntegrityError as exc:  #unique
             await self.session.rollback()
             raise SlotAlreadyBookedError("El horario ya está reservado.") from exc
         return booking
